@@ -1,0 +1,7 @@
+6
+3 echo Hello
+2 pwd
+4 echo world
+1 ls -al
+5 pwd
+6 sleep 7
