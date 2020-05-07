@@ -6,7 +6,7 @@
 #include "time.h"
 #include "math.h"
 
-const int partitionFreq = 10;
+const int partitionFreq = 100;
 
 // structs describing the start and the end of a segment
 typedef struct {
@@ -19,7 +19,7 @@ pthread_mutex_t sumAddLock;
 double result = 0;
 
 double f(double x) {
-    return sin(x) + exp(x);
+    return exp(x);
 }
 
 void* PrintResult() {
@@ -42,12 +42,12 @@ void* CalculateSegmentSum(void* segment) {
     double currentSegmentIntegral = 0;
 
     // using the "Trapezoidal rule"
-    // f(x)dx = (x_rigth - x_left) * (f(x_left) + f(x_right)) / 2
+    // f(x)dx = (x_rigth - x_left) * f( (x_left + x_right)/2 )
     double range = (currentSegment->end - currentSegment->start) / partitionFreq;
     for (int i = 0; i < partitionFreq; i++) {
         double left = currentSegment->start + range * i;
         double right = left + range;
-        double average = (f(left) + f(right)) / 2.;
+        double average = f((left + right) / 2.);
         currentSegmentIntegral += range * average;
     }
 
@@ -69,24 +69,24 @@ void* CalculateSegmentSum(void* segment) {
 }
 
 int main(int argc, char *argv[]) {
-    int a = 0;
     struct timespec mainBegin, mainEnd;
     clock_gettime(CLOCK_REALTIME, &mainBegin);
 
     double leftBound = atof(argv[1]);
-    double rigthBound = atof(argv[2]);
-    int threadCount = atoi(argv[3]); // number of threads to be used
-    assert(threadCount > 1);
+    double rightBound = atof(argv[2]);
+    double segmentLength = atof(argv[3]);
+
+    int threadCount = (int)ceil((rightBound - leftBound) / segmentLength + 1);
 
     // main program allocates structs for each segment and initializes them
-    double range = (rigthBound - leftBound) / (threadCount - 1);
     Segment* segments = (Segment*)malloc((threadCount - 1) * sizeof(Segment));
 
     int i;
     for (i = 0; i < threadCount - 1; i++) {
-        segments[i].start = leftBound + range * i;
-        segments[i].end = segments[i].start + range;
+        segments[i].start = leftBound + segmentLength * i;
+        segments[i].end = segments[i].start + segmentLength;
     }
+    segments[threadCount - 2].end = rightBound;
 
     // setting the number of running slave threads to (threadCount - 1)
     sem_init(&resultReady, 0, threadCount - 1);
@@ -96,9 +96,9 @@ int main(int argc, char *argv[]) {
     pthread_t* tid = (pthread_t*)malloc(threadCount * sizeof(pthread_t));
     // master thread doesn't do any calculations
     pthread_create(&tid[0], NULL, PrintResult, NULL);
-    for (i = 1; i < threadCount; ++i)
+    for (i = 0; i < threadCount - 1; ++i)
         pthread_create(&tid[i], NULL, CalculateSegmentSum, &segments[i]);
-    for (i = 1; i < threadCount; ++i)
+    for (i = 0; i < threadCount - 1; ++i)
         pthread_join(tid[i], NULL);
 
     sem_destroy(&resultReady);

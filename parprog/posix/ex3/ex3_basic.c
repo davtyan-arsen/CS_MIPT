@@ -2,8 +2,9 @@
 #include "stdlib.h"
 #include "pthread.h"
 #include "time.h"
+#include "math.h"
 
-const int partitionFreq = 10;
+const int partitionFreq = 100;
 
 // structs describing the start and the end of a segment
 typedef struct {
@@ -50,18 +51,20 @@ int main(int argc, char *argv[]) {
     clock_gettime(CLOCK_REALTIME, &mainBegin);
 
     double leftBound = atof(argv[1]);
-    double rigthBound = atof(argv[2]);
-    int threadCount = atoi(argv[3]); // number of threads to be used
+    double rightBound = atof(argv[2]);
+    double segmentLength = atof(argv[3]);
+
+    int threadCount = (int)ceil((rightBound - leftBound) / segmentLength);
 
     // main program allocates structs for each segment and initializes them
-    double range = (rigthBound - leftBound) / threadCount;
     Segment* segments = (Segment*)malloc(threadCount * sizeof(Segment));
 
     int i;
     for (i = 0; i < threadCount; i++) {
-        segments[i].start = leftBound + range * i;
-        segments[i].end = segments[i].start + range;
+        segments[i].start = leftBound + segmentLength * i;
+        segments[i].end = segments[i].start + segmentLength;
     }
+    segments[threadCount - 1].end = rightBound;
 
     pthread_mutex_init(&sumAddLock, NULL);
 

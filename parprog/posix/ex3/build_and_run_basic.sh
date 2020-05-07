@@ -1,2 +1,2 @@
-gcc ex3_basic.c -lrt -o out -lpthread
-./out 0 10 3
+gcc ex3_basic.c -lrt -lm -o out -lpthread
+./out 1 2000 1000
